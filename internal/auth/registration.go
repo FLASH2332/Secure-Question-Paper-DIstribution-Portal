@@ -1,0 +1,138 @@
+package auth
+
+import (
+	"database/sql"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/FLASH2332/Secure-Question-Paper-Distribution-Portal/internal/crypto"
+	"github.com/FLASH2332/Secure-Question-Paper-Distribution-Portal/internal/models"
+)
+
+// ValidateEmail checks if email format is valid
+func ValidateEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+// ValidatePassword checks password strength
+func ValidatePassword(password string) error {
+	if len(password) < 8 {
+		return fmt.Errorf("password must be at least 8 characters long")
+	}
+
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
+	hasSpecial := regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`).MatchString(password)
+
+	if !hasUpper {
+		return fmt.Errorf("password must contain at least one uppercase letter")
+	}
+	if !hasLower {
+		return fmt.Errorf("password must contain at least one lowercase letter")
+	}
+	if !hasNumber {
+		return fmt.Errorf("password must contain at least one number")
+	}
+	if !hasSpecial {
+		return fmt.Errorf("password must contain at least one special character")
+	}
+
+	return nil
+}
+
+// ValidateRole checks if role is valid
+func ValidateRole(role string) bool {
+	validRoles := []string{"Faculty", "ExamCell", "Student"}
+	role = strings.TrimSpace(role)
+
+	for _, validRole := range validRoles {
+		if strings.EqualFold(role, validRole) {
+			return true
+		}
+	}
+	return false
+}
+
+// RegisterUser creates a new user account
+func RegisterUser(db *sql.DB, username, password, email, role string) (*models.User, error) {
+	// Validate inputs
+	username = strings.TrimSpace(username)
+	email = strings.TrimSpace(email)
+	role = strings.Title(strings.ToLower(strings.TrimSpace(role)))
+
+	if username == "" {
+		return nil, fmt.Errorf("username cannot be empty")
+	}
+
+	if !ValidateEmail(email) {
+		return nil, fmt.Errorf("invalid email format")
+	}
+
+	if err := ValidatePassword(password); err != nil {
+		return nil, err
+	}
+
+	if !ValidateRole(role) {
+		return nil, fmt.Errorf("invalid role. Must be Faculty, ExamCell, or Student")
+	}
+
+	// Check if username already exists
+	var exists int
+	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username).Scan(&exists)
+	if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	if exists > 0 {
+		return nil, fmt.Errorf("username already exists")
+	}
+
+	// Check if email already exists
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", email).Scan(&exists)
+	if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	if exists > 0 {
+		return nil, fmt.Errorf("email already registered")
+	}
+
+	// Generate salt
+	salt, err := crypto.GenerateSalt()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate salt: %w", err)
+	}
+
+	// Hash password
+	passwordHash, err := crypto.HashPassword(password, salt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Insert user
+	query := `
+        INSERT INTO users (username, password_hash, salt, role, email) 
+        VALUES (?, ?, ?, ?, ?)
+    `
+	result, err := db.Exec(query, username, passwordHash, salt, role, email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID: %w", err)
+	}
+
+	user := &models.User{
+		ID:           int(userID),
+		Username:     username,
+		PasswordHash: passwordHash,
+		Salt:         salt,
+		Role:         role,
+		Email:        email,
+	}
+
+	return user, nil
+}
