@@ -1,21 +1,21 @@
 package main
 
 import (
-    "fmt"
-    "database/sql"
-    _ "github.com/mattn/go-sqlite3"
+	"fmt"
+	"log"
+
+	"github.com/FLASH2332/Secure-Question-Paper-Distribution-Portal/internal/database"
 )
 
 func main() {
-    fmt.Println("🔐 Secure Exam System - Setup Verified!")
-    
-    // Test SQLite connection
-    db, err := sql.Open("sqlite3", "./storage/exam.db")
-    if err != nil {
-        fmt.Println("Database connection failed:", err)
-        return
-    }
-    defer db.Close()
-    
-    fmt.Println("Database connection successful!")
+	fmt.Println("Secure Exam System - Initializing...")
+
+	// Connect to database
+	db, err := database.Connect()
+	if err != nil {
+		log.Fatal("Database connection failed:", err)
+	}
+	defer db.Close()
+
+	fmt.Println("MySQL connection successful!")
 }

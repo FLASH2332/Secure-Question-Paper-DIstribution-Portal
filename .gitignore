@@ -9,6 +9,9 @@ secure-exam-system
 # Test binary
 *.test
 
+.env
+*.log
+
 # Database
 storage/*.db
 storage/*.db-journal
