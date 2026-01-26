@@ -1,0 +1,33 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+secure-exam-system
+
+# Test binary
+*.test
+
+# Database
+storage/*.db
+storage/*.db-journal
+
+# Keys (IMPORTANT - never commit private keys)
+storage/keys/*
+!storage/keys/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+*.log
