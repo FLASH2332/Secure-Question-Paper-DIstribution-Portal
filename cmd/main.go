@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/FLASH2332/Secure-Question-Paper-Distribution-Portal/internal/acl"
 	"github.com/FLASH2332/Secure-Question-Paper-Distribution-Portal/internal/auth"
@@ -144,52 +146,133 @@ func handleLogin(db *sql.DB) {
 	fmt.Println("\nLogin successful!")
 	fmt.Println(strings.Repeat("=", 50))
 
-	showRoleBasedDashboard(db, user)
+	showDashboard(db, user)
 }
 
-func showRoleBasedDashboard(db *sql.DB, user *models.User) {
-	fmt.Printf("\nWelcome, %s!\n", user.Username)
-	fmt.Printf("Role: %s\n", user.Role)
+func showDashboard(db *sql.DB, user *models.User) {
+	fmt.Printf("\n🎉 Welcome, %s!\n", user.Username)
+	fmt.Printf("🎭 Role: %s\n", user.Role)
 
 	switch user.Role {
 	case "Faculty":
-		showFacultyDashboard(db, user)
+		facultyDashboard(db, user)
 	case "ExamCell":
-		showExamCellDashboard(db, user)
+		examCellDashboard(db, user)
 	case "Student":
-		showStudentDashboard(db, user)
+		studentDashboard(db, user)
 	}
 }
 
-func showFacultyDashboard(db *sql.DB, user *models.User) {
-	service := services.NewFacultyService(db, user)
+func facultyDashboard(db *sql.DB, user *models.User) {
+	paperService := &services.PaperService{DB: db}
 
 	for {
 		fmt.Println("\n" + strings.Repeat("=", 50))
 		fmt.Println("           FACULTY DASHBOARD")
 		fmt.Println(strings.Repeat("=", 50))
-		fmt.Println("1. Upload Question Paper (Coming Soon)")
+		fmt.Println("1. Upload Question Paper")
 		fmt.Println("2. View My Papers")
-		fmt.Println("3. View My Permissions")
-		fmt.Println("4. View Audit Log")
-		fmt.Println("5. Logout")
+		fmt.Println("3. Logout")
 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice : ", 1, 5)
+		choice := utils.GetChoice("Enter your choice", 1, 3)
 
 		switch choice {
 		case 1:
-			handleUploadPaper(service)
+			handlePaperUpload(db, user, paperService)
 		case 2:
-			handleViewMyPapers(service)
+			handleViewPapers(user, paperService)
 		case 3:
-			showPermissions(db, user)
-		case 4:
-			showAuditLog(db, user)
-		case 5:
 			return
 		}
 	}
+}
+
+func handlePaperUpload(db *sql.DB, user *models.User, paperService *services.PaperService) {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" UPLOAD QUESTION PAPER")
+	fmt.Println(strings.Repeat("=", 50))
+
+	title := utils.GetInput("Paper Title: ")
+	if title == "" {
+		fmt.Println(" Title cannot be empty")
+		return
+	}
+
+	subject := utils.GetInput("Subject: ")
+	if subject == "" {
+		fmt.Println(" Subject cannot be empty")
+		return
+	}
+
+	examDateStr := utils.GetInput("Exam Date (YYYY-MM-DD): ")
+	examDate, err := time.Parse("2006-01-02", examDateStr)
+	if err != nil {
+		fmt.Println(" Invalid date format. Use YYYY-MM-DD")
+		return
+	}
+
+	filePath := utils.GetInput("File Path (PDF/TXT): ")
+	if filePath == "" {
+		fmt.Println(" File path cannot be empty")
+		return
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf(" File not found: %s\n", filePath)
+		fmt.Println(" Tip: Use absolute path like /home/user/paper.pdf")
+		return
+	}
+
+	// Upload with encryption
+	err = paperService.UploadPaper(user, title, subject, filePath, examDate)
+	if err != nil {
+		fmt.Println(" Upload failed:", err)
+		return
+	}
+
+	fmt.Println("\n Press Enter to continue...")
+	utils.GetInput("")
+}
+
+func handleViewPapers(user *models.User, paperService *services.PaperService) {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" MY QUESTION PAPERS")
+	fmt.Println(strings.Repeat("=", 50))
+
+	papers, err := paperService.GetFacultyPapers(user.ID)
+	if err != nil {
+		fmt.Println(" Failed to fetch papers:", err)
+		return
+	}
+
+	if len(papers) == 0 {
+		fmt.Println("No papers uploaded yet")
+		utils.GetInput("\nPress Enter to continue...")
+		return
+	}
+
+	for i, paper := range papers {
+		fmt.Printf("\n%d. %s\n", i+1, paper.Title)
+		fmt.Printf("    Subject: %s\n", paper.Subject)
+		fmt.Printf("    Exam Date: %s\n", paper.ExamDate.Format("2006-01-02"))
+		fmt.Printf("    Uploaded: %s\n", paper.UploadDate.Format("2006-01-02 15:04"))
+		fmt.Printf("    Status: %s\n", paper.Status)
+		fmt.Printf("    Encrypted: Yes\n")
+	}
+
+	utils.GetInput("\nPress Enter to continue...")
+}
+
+func examCellDashboard(db *sql.DB, user *models.User) {
+	fmt.Println("\n[ExamCell Dashboard - Coming in next step...]")
+	utils.GetInput("\nPress Enter to continue...")
+}
+
+func studentDashboard(db *sql.DB, user *models.User) {
+	fmt.Println("\n[Student Dashboard - Limited Access]")
+	utils.GetInput("\nPress Enter to continue...")
 }
 
 func showExamCellDashboard(db *sql.DB, user *models.User) {
