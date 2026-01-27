@@ -134,39 +134,45 @@ func RegisterUser(db *sql.DB, username, password, email, role string) (*models.U
 		Email:        email,
 	}
 
+	// Generate RSA keys for Faculty and ExamCell
+	if err := GenerateUserKeys(db, user); err != nil {
+		// Log warning but don't fail registration
+		fmt.Printf("Warning: Failed to generate keys: %v\n", err)
+	}
+
 	return user, nil
 }
 
 // GenerateUserKeys generates RSA keys for Faculty and ExamCell users
 func GenerateUserKeys(db *sql.DB, user *models.User) error {
-    // Only generate keys for Faculty and ExamCell
-    if user.Role != "Faculty" && user.Role != "ExamCell" {
-        return nil // Students don't need keys
-    }
-    
-    fmt.Println("Generating RSA key pair (2048-bit)...")
-    
-    // Generate RSA key pair
-    privateKey, publicKey, err := crypto.GenerateRSAKeyPair()
-    if err != nil {
-        return fmt.Errorf("failed to generate key pair: %w", err)
-    }
-    
-    // Convert to PEM format
-    privateKeyPEM := crypto.EncodePrivateKeyToPEM(privateKey)
-    publicKeyPEM, err := crypto.EncodePublicKeyToPEM(publicKey)
-    if err != nil {
-        return fmt.Errorf("failed to encode public key: %w", err)
-    }
-    
-    // Store keys in database
-    query := `UPDATE users SET public_key = ?, private_key_encrypted = ? WHERE id = ?`
-    _, err = db.Exec(query, publicKeyPEM, privateKeyPEM, user.ID)
-    if err != nil {
-        return fmt.Errorf("failed to store keys: %w", err)
-    }
-    
-    fmt.Println("RSA keys generated and stored securely")
-    
-    return nil
+	// Only generate keys for Faculty and ExamCell
+	if user.Role != "Faculty" && user.Role != "ExamCell" {
+		return nil // Students don't need keys
+	}
+
+	fmt.Println("Generating RSA key pair (2048-bit)...")
+
+	// Generate RSA key pair
+	privateKey, publicKey, err := crypto.GenerateRSAKeyPair()
+	if err != nil {
+		return fmt.Errorf("failed to generate key pair: %w", err)
+	}
+
+	// Convert to PEM format
+	privateKeyPEM := crypto.EncodePrivateKeyToPEM(privateKey)
+	publicKeyPEM, err := crypto.EncodePublicKeyToPEM(publicKey)
+	if err != nil {
+		return fmt.Errorf("failed to encode public key: %w", err)
+	}
+
+	// Store keys in database
+	query := `UPDATE users SET public_key = ?, private_key_encrypted = ? WHERE id = ?`
+	_, err = db.Exec(query, publicKeyPEM, privateKeyPEM, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to store keys: %w", err)
+	}
+
+	fmt.Println("RSA keys generated and stored securely")
+
+	return nil
 }
