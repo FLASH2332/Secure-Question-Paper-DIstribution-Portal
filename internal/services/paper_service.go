@@ -163,3 +163,166 @@ func (ps *PaperService) GetFacultyPapers(facultyID int) ([]models.QuestionPaper,
 
 	return papers, nil
 }
+
+// GetAllPapers retrieves all question papers (for ExamCell)
+func (ps *PaperService) GetAllPapers() ([]models.QuestionPaper, error) {
+	query := `
+        SELECT qp.id, qp.title, qp.subject, qp.upload_date, qp.exam_date, qp.status, u.username as faculty_name
+        FROM question_papers qp
+        JOIN users u ON qp.faculty_id = u.id
+        ORDER BY qp.upload_date DESC
+    `
+
+	rows, err := ps.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var papers []models.QuestionPaper
+	for rows.Next() {
+		var paper models.QuestionPaper
+		var examDate sql.NullTime
+		var facultyName string
+
+		err := rows.Scan(&paper.ID, &paper.Title, &paper.Subject, &paper.UploadDate, &examDate, &paper.Status, &facultyName)
+		if err != nil {
+			return nil, err
+		}
+
+		if examDate.Valid {
+			paper.ExamDate = examDate.Time
+		}
+		paper.FacultyName = facultyName
+
+		papers = append(papers, paper)
+	}
+
+	return papers, nil
+}
+
+// DecryptPaper decrypts a question paper for ExamCell
+func (ps *PaperService) DecryptPaper(paperID int, examCellUser *models.User) ([]byte, error) {
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println(" DECRYPTING QUESTION PAPER")
+	fmt.Println(strings.Repeat("=", 60))
+
+	// Step 1: Fetch paper details
+	fmt.Println("\n Fetching encrypted paper from database...")
+	var paper struct {
+		Title               string
+		Subject             string
+		EncryptedContentB64 string
+		EncryptedAESKeyB64  string
+		DigitalSignatureB64 string
+		FacultyID           int
+	}
+
+	query := `
+        SELECT title, subject, encrypted_content, encrypted_aes_key, digital_signature, faculty_id
+        FROM question_papers 
+        WHERE id = ?
+    `
+
+	err := ps.DB.QueryRow(query, paperID).Scan(
+		&paper.Title,
+		&paper.Subject,
+		&paper.EncryptedContentB64,
+		&paper.EncryptedAESKeyB64,
+		&paper.DigitalSignatureB64,
+		&paper.FacultyID,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("paper not found")
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to fetch paper: %w", err)
+	}
+
+	fmt.Printf(" Paper retrieved: %s\n", paper.Title)
+
+	// Step 2: Decode from Base64
+	fmt.Println("\n Decoding Base64 data...")
+	encryptedContent, err := crypto.DecodeBase64(paper.EncryptedContentB64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode content: %w", err)
+	}
+
+	encryptedAESKey, err := crypto.DecodeBase64(paper.EncryptedAESKeyB64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode AES key: %w", err)
+	}
+
+	signature, err := crypto.DecodeBase64(paper.DigitalSignatureB64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode signature: %w", err)
+	}
+	fmt.Println(" Base64 decoding complete")
+
+	// Step 3: Get ExamCell's private key
+	fmt.Println("\n Loading ExamCell's private key...")
+	var privateKeyPEM string
+	query = `SELECT private_key_encrypted FROM users WHERE id = ?`
+	err = ps.DB.QueryRow(query, examCellUser.ID).Scan(&privateKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get private key: %w", err)
+	}
+
+	privateKey, err := crypto.DecodePrivateKeyFromPEM(privateKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode private key: %w", err)
+	}
+	fmt.Println(" Private key loaded")
+
+	// Step 4: Decrypt AES key using RSA private key
+	fmt.Println("\n Decrypting AES key with RSA private key...")
+	aesKey, err := crypto.DecryptWithPrivateKey(encryptedAESKey, privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt AES key: %w", err)
+	}
+	fmt.Printf(" AES key decrypted (%d bytes)\n", len(aesKey))
+
+	// Step 5: Decrypt content using AES key
+	fmt.Println("\n Decrypting paper content with AES key...")
+	decryptedContent, err := crypto.DecryptAES(encryptedContent, aesKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt content: %w", err)
+	}
+	fmt.Printf(" Content decrypted (%.2f KB)\n", float64(len(decryptedContent))/1024.0)
+
+	// Step 6: Get Faculty's public key for signature verification
+	fmt.Println("\n Verifying digital signature...")
+	var facultyPublicKeyPEM string
+	query = `SELECT public_key FROM users WHERE id = ?`
+	err = ps.DB.QueryRow(query, paper.FacultyID).Scan(&facultyPublicKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get faculty public key: %w", err)
+	}
+
+	facultyPublicKey, err := crypto.DecodePublicKeyFromPEM(facultyPublicKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode faculty public key: %w", err)
+	}
+
+	// Step 7: Verify signature
+	err = crypto.VerifySignature(decryptedContent, signature, facultyPublicKey)
+	if err != nil {
+		fmt.Println(" SIGNATURE VERIFICATION FAILED!")
+		fmt.Println("  WARNING: Paper may have been tampered with!")
+		return nil, fmt.Errorf("signature verification failed: %w", err)
+	}
+	fmt.Println(" Digital signature verified - paper is authentic!")
+
+	// Summary
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println(" DECRYPTION COMPLETE!")
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Printf(" Title: %s\n", paper.Title)
+	fmt.Printf(" Subject: %s\n", paper.Subject)
+	fmt.Println(" Decryption: Successful")
+	fmt.Println(" Signature: Verified")
+	fmt.Println(" Integrity: Confirmed")
+	fmt.Println(strings.Repeat("=", 60))
+
+	return decryptedContent, nil
+}

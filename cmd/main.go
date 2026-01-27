@@ -266,7 +266,80 @@ func handleViewPapers(user *models.User, paperService *services.PaperService) {
 }
 
 func examCellDashboard(db *sql.DB, user *models.User) {
-	fmt.Println("\n[ExamCell Dashboard - Coming in next step...]")
+	paperService := &services.PaperService{DB: db}
+
+	for {
+		fmt.Println("\n" + strings.Repeat("=", 50))
+		fmt.Println("           EXAM CELL DASHBOARD")
+		fmt.Println(strings.Repeat("=", 50))
+		fmt.Println("1. View All Papers")
+		fmt.Println("2. Decrypt & View Paper")
+		fmt.Println("3. Logout")
+		fmt.Println(strings.Repeat("=", 50))
+
+		choice := utils.GetChoice("Enter your choice : ", 1, 3)
+
+		switch choice {
+		case 1:
+			handleViewAllPapers(paperService)
+		case 2:
+			handleDecryptPaper(user, paperService)
+		case 3:
+			return
+		}
+	}
+}
+
+func handleViewAllPapers(paperService *services.PaperService) {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" ALL QUESTION PAPERS")
+	fmt.Println(strings.Repeat("=", 50))
+	papers, err := paperService.GetAllPapers()
+	if err != nil {
+		fmt.Println(" Failed to fetch papers:", err)
+		utils.GetInput("\nPress Enter to continue...")
+		return
+	}
+
+	if len(papers) == 0 {
+		fmt.Println("No papers available")
+		utils.GetInput("\nPress Enter to continue...")
+		return
+	}
+
+	for i, paper := range papers {
+		fmt.Printf("\n%d. %s\n", i+1, paper.Title)
+		fmt.Printf("    Subject: %s\n", paper.Subject)
+		fmt.Printf("    Faculty: %s\n", paper.FacultyName)
+		fmt.Printf("    Exam Date: %s\n", paper.ExamDate.Format("2006-01-02"))
+		fmt.Printf("    Uploaded: %s\n", paper.UploadDate.Format("2006-01-02 15:04"))
+		fmt.Printf("    Status: %s\n", paper.Status)
+		fmt.Printf("    Encrypted: Yes\n")
+		fmt.Printf("    Paper ID: %d\n", paper.ID)
+	}
+
+	utils.GetInput("\nPress Enter to continue...")
+}
+
+func handleDecryptPaper(user *models.User, paperService *services.PaperService) {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" DECRYPT QUESTION PAPER")
+	fmt.Println(strings.Repeat("=", 50))
+	paperID := utils.GetChoice("Enter Paper ID to decrypt", 1, 9999)
+
+	decryptedContent, err := paperService.DecryptPaper(paperID, user)
+	if err != nil {
+		fmt.Println(" Decryption failed:", err)
+		utils.GetInput("\nPress Enter to continue...")
+		return
+	}
+
+	// Display decrypted content
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println(" DECRYPTED QUESTION PAPER")
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println(string(decryptedContent))
+	fmt.Println(strings.Repeat("=", 60))
 	utils.GetInput("\nPress Enter to continue...")
 }
 
@@ -275,67 +348,67 @@ func studentDashboard(db *sql.DB, user *models.User) {
 	utils.GetInput("\nPress Enter to continue...")
 }
 
-func showExamCellDashboard(db *sql.DB, user *models.User) {
-	service := services.NewExamCellService(db, user)
+// func showExamCellDashboard(db *sql.DB, user *models.User) {
+// 	service := services.NewExamCellService(db, user)
 
-	for {
-		fmt.Println("\n" + strings.Repeat("=", 50))
-		fmt.Println("          EXAM CELL DASHBOARD")
-		fmt.Println(strings.Repeat("=", 50))
-		fmt.Println("1. View All Papers")
-		fmt.Println("2. Decrypt Paper (Coming Soon)")
-		fmt.Println("3. Create Exam Session (Coming Soon)")
-		fmt.Println("4. View My Permissions")
-		fmt.Println("5. View Audit Log")
-		fmt.Println("6. Logout")
-		fmt.Println(strings.Repeat("=", 50))
+// 	for {
+// 		fmt.Println("\n" + strings.Repeat("=", 50))
+// 		fmt.Println("          EXAM CELL DASHBOARD")
+// 		fmt.Println(strings.Repeat("=", 50))
+// 		fmt.Println("1. View All Papers")
+// 		fmt.Println("2. Decrypt Paper (Coming Soon)")
+// 		fmt.Println("3. Create Exam Session (Coming Soon)")
+// 		fmt.Println("4. View My Permissions")
+// 		fmt.Println("5. View Audit Log")
+// 		fmt.Println("6. Logout")
+// 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice : ", 1, 6)
+// 		choice := utils.GetChoice("Enter your choice : ", 1, 6)
 
-		switch choice {
-		case 1:
-			handleViewAllPapers(service)
-		case 2:
-			fmt.Println("\nDecryption feature coming in next module...")
-		case 3:
-			fmt.Println("\nSession creation coming soon...")
-		case 4:
-			showPermissions(db, user)
-		case 5:
-			showAuditLog(db, user)
-		case 6:
-			return
-		}
-	}
-}
+// 		switch choice {
+// 		case 1:
+// 			handleViewAllPapers(service)
+// 		case 2:
+// 			fmt.Println("\nDecryption feature coming in next module...")
+// 		case 3:
+// 			fmt.Println("\nSession creation coming soon...")
+// 		case 4:
+// 			showPermissions(db, user)
+// 		case 5:
+// 			showAuditLog(db, user)
+// 		case 6:
+// 			return
+// 		}
+// 	}
+// }
 
-func showStudentDashboard(db *sql.DB, user *models.User) {
-	service := services.NewStudentService(db, user)
+// func showStudentDashboard(db *sql.DB, user *models.User) {
+// 	service := services.NewStudentService(db, user)
 
-	for {
-		fmt.Println("\n" + strings.Repeat("=", 50))
-		fmt.Println("          STUDENT DASHBOARD")
-		fmt.Println(strings.Repeat("=", 50))
-		fmt.Println("1. View Exam Schedule")
-		fmt.Println("2. Try to Access Question Paper (Will be Denied)")
-		fmt.Println("3. View My Permissions")
-		fmt.Println("4. Logout")
-		fmt.Println(strings.Repeat("=", 50))
+// 	for {
+// 		fmt.Println("\n" + strings.Repeat("=", 50))
+// 		fmt.Println("          STUDENT DASHBOARD")
+// 		fmt.Println(strings.Repeat("=", 50))
+// 		fmt.Println("1. View Exam Schedule")
+// 		fmt.Println("2. Try to Access Question Paper (Will be Denied)")
+// 		fmt.Println("3. View My Permissions")
+// 		fmt.Println("4. Logout")
+// 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice : ", 1, 4)
+// 		choice := utils.GetChoice("Enter your choice : ", 1, 4)
 
-		switch choice {
-		case 1:
-			handleViewExamSchedule(service)
-		case 2:
-			handleAttemptAccessPaper(service)
-		case 3:
-			showPermissions(db, user)
-		case 4:
-			return
-		}
-	}
-}
+// 		switch choice {
+// 		case 1:
+// 			handleViewExamSchedule(service)
+// 		case 2:
+// 			handleAttemptAccessPaper(service)
+// 		case 3:
+// 			showPermissions(db, user)
+// 		case 4:
+// 			return
+// 		}
+// 	}
+// }
 
 func handleUploadPaper(service *services.FacultyService) {
 	fmt.Println("\nUpload Question Paper")
@@ -368,29 +441,6 @@ func handleViewMyPapers(service *services.FacultyService) {
 
 	if len(papers) == 0 {
 		fmt.Println("No papers uploaded yet")
-		return
-	}
-
-	for i, paper := range papers {
-		fmt.Printf("\n%d. %s\n", i+1, paper.Title)
-		fmt.Printf("   Subject: %s\n", paper.Subject)
-		fmt.Printf("   Status: %s\n", paper.Status)
-		fmt.Printf("   Uploaded: %s\n", paper.UploadDate.Format("2006-01-02 15:04"))
-	}
-}
-
-func handleViewAllPapers(service *services.ExamCellService) {
-	fmt.Println("\nAll Question Papers")
-	fmt.Println(strings.Repeat("=", 50))
-
-	papers, err := service.GetAllPapers()
-	if err != nil {
-		fmt.Println("", err)
-		return
-	}
-
-	if len(papers) == 0 {
-		fmt.Println("No papers in system yet")
 		return
 	}
 

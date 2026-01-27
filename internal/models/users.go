@@ -28,6 +28,7 @@ type QuestionPaper struct {
 	Title            string
 	Subject          string
 	FacultyID        int
+	FacultyName      string
 	EncryptedContent string
 	EncryptedAESKey  string
 	DigitalSignature string
