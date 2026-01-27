@@ -172,10 +172,12 @@ func facultyDashboard(db *sql.DB, user *models.User) {
 		fmt.Println(strings.Repeat("=", 50))
 		fmt.Println("1. Upload Question Paper")
 		fmt.Println("2. View My Papers")
-		fmt.Println("3. Logout")
+		fmt.Println("3. View My Permissions")
+		fmt.Println("4. View Audit Log")
+		fmt.Println("5. Logout")
 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice : ", 1, 3)
+		choice := utils.GetChoice("Enter your choice : ", 1, 5)
 
 		switch choice {
 		case 1:
@@ -183,6 +185,10 @@ func facultyDashboard(db *sql.DB, user *models.User) {
 		case 2:
 			handleViewPapers(user, paperService)
 		case 3:
+			showPermissions(db, user)
+		case 4:
+			showAuditLog(db, user)
+		case 5:
 			return
 		}
 	}
@@ -274,10 +280,12 @@ func examCellDashboard(db *sql.DB, user *models.User) {
 		fmt.Println(strings.Repeat("=", 50))
 		fmt.Println("1. View All Papers")
 		fmt.Println("2. Decrypt & View Paper")
-		fmt.Println("3. Logout")
+		fmt.Println("3. View My Permissions")
+		fmt.Println("4. View Audit Log")
+		fmt.Println("5. Logout")
 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice : ", 1, 3)
+		choice := utils.GetChoice("Enter your choice : ", 1, 5)
 
 		switch choice {
 		case 1:
@@ -285,6 +293,10 @@ func examCellDashboard(db *sql.DB, user *models.User) {
 		case 2:
 			handleDecryptPaper(user, paperService)
 		case 3:
+			showPermissions(db, user)
+		case 4:
+			showAuditLog(db, user)
+		case 5:
 			return
 		}
 	}
@@ -416,148 +428,6 @@ func handleStudentBlockedAccess() {
 	fmt.Println("\n This access control is enforced by ACL policy.")
 
 	utils.GetInput("\nPress Enter to continue...")
-}
-
-// func showExamCellDashboard(db *sql.DB, user *models.User) {
-// 	service := services.NewExamCellService(db, user)
-
-// 	for {
-// 		fmt.Println("\n" + strings.Repeat("=", 50))
-// 		fmt.Println("          EXAM CELL DASHBOARD")
-// 		fmt.Println(strings.Repeat("=", 50))
-// 		fmt.Println("1. View All Papers")
-// 		fmt.Println("2. Decrypt Paper (Coming Soon)")
-// 		fmt.Println("3. Create Exam Session (Coming Soon)")
-// 		fmt.Println("4. View My Permissions")
-// 		fmt.Println("5. View Audit Log")
-// 		fmt.Println("6. Logout")
-// 		fmt.Println(strings.Repeat("=", 50))
-
-// 		choice := utils.GetChoice("Enter your choice : ", 1, 6)
-
-// 		switch choice {
-// 		case 1:
-// 			handleViewAllPapers(service)
-// 		case 2:
-// 			fmt.Println("\nDecryption feature coming in next module...")
-// 		case 3:
-// 			fmt.Println("\nSession creation coming soon...")
-// 		case 4:
-// 			showPermissions(db, user)
-// 		case 5:
-// 			showAuditLog(db, user)
-// 		case 6:
-// 			return
-// 		}
-// 	}
-// }
-
-// func showStudentDashboard(db *sql.DB, user *models.User) {
-// 	service := services.NewStudentService(db, user)
-
-// 	for {
-// 		fmt.Println("\n" + strings.Repeat("=", 50))
-// 		fmt.Println("          STUDENT DASHBOARD")
-// 		fmt.Println(strings.Repeat("=", 50))
-// 		fmt.Println("1. View Exam Schedule")
-// 		fmt.Println("2. Try to Access Question Paper (Will be Denied)")
-// 		fmt.Println("3. View My Permissions")
-// 		fmt.Println("4. Logout")
-// 		fmt.Println(strings.Repeat("=", 50))
-
-// 		choice := utils.GetChoice("Enter your choice : ", 1, 4)
-
-// 		switch choice {
-// 		case 1:
-// 			handleViewExamSchedule(service)
-// 		case 2:
-// 			handleAttemptAccessPaper(service)
-// 		case 3:
-// 			showPermissions(db, user)
-// 		case 4:
-// 			return
-// 		}
-// 	}
-// }
-
-func handleUploadPaper(service *services.FacultyService) {
-	fmt.Println("\nUpload Question Paper")
-	fmt.Println(strings.Repeat("=", 50))
-
-	// Check permission
-	if err := service.CanUploadPaper(); err != nil {
-		fmt.Println("", err)
-		return
-	}
-
-	if err := service.CanEncrypt(); err != nil {
-		fmt.Println("", err)
-		return
-	}
-
-	fmt.Println("Permission granted: You can upload and encrypt papers")
-	fmt.Println("Upload functionality coming in encryption module...")
-}
-
-func handleViewMyPapers(service *services.FacultyService) {
-	fmt.Println("\nMy Question Papers")
-	fmt.Println(strings.Repeat("=", 50))
-
-	papers, err := service.GetMyPapers()
-	if err != nil {
-		fmt.Println("", err)
-		return
-	}
-
-	if len(papers) == 0 {
-		fmt.Println("No papers uploaded yet")
-		return
-	}
-
-	for i, paper := range papers {
-		fmt.Printf("\n%d. %s\n", i+1, paper.Title)
-		fmt.Printf("   Subject: %s\n", paper.Subject)
-		fmt.Printf("   Status: %s\n", paper.Status)
-		fmt.Printf("   Uploaded: %s\n", paper.UploadDate.Format("2006-01-02 15:04"))
-	}
-}
-
-// func handleViewExamSchedule(service *services.StudentService) {
-// 	fmt.Println("\nExam Schedule")
-// 	fmt.Println(strings.Repeat("=", 50))
-
-// 	sessions, err := service.GetExamSchedule()
-// 	if err != nil {
-// 		fmt.Println("", err)
-// 		return
-// 	}
-
-// 	if len(sessions) == 0 {
-// 		fmt.Println(" No exams scheduled yet")
-// 		return
-// 	}
-
-// 	for i, session := range sessions {
-// 		fmt.Printf("\n%d. %s\n", i+1, session.SessionName)
-// 		fmt.Printf("   Scheduled: %s\n", session.ScheduledTime.Format("2006-01-02 15:04"))
-// 		fmt.Printf("   Duration: %d minutes\n", session.DurationMinutes)
-// 		fmt.Printf("   Status: %s\n", session.Status)
-// 	}
-// }
-
-func handleAttemptAccessPaper(service *services.StudentService) {
-	fmt.Println("\n Attempting to Access Question Paper")
-	fmt.Println(strings.Repeat("=", 50))
-
-	err := service.CanAccessPaper()
-	if err != nil {
-		fmt.Println(" ACCESS DENIED:", err)
-		fmt.Println("\n This demonstrates ACL enforcement!")
-		fmt.Println("   Students cannot access question papers")
-		return
-	}
-
-	fmt.Println(" Access granted (this should not happen!)")
 }
 
 func showPermissions(db *sql.DB, user *models.User) {
