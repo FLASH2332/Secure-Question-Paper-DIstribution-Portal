@@ -344,7 +344,77 @@ func handleDecryptPaper(user *models.User, paperService *services.PaperService) 
 }
 
 func studentDashboard(db *sql.DB, user *models.User) {
-	fmt.Println("\n[Student Dashboard - Limited Access]")
+	for {
+		fmt.Println("\n" + strings.Repeat("=", 50))
+		fmt.Println("           STUDENT DASHBOARD")
+		fmt.Println(strings.Repeat("=", 50))
+		fmt.Println("1. View Exam Schedule")
+		fmt.Println("2. Try to Access Papers (Blocked)")
+		fmt.Println("3. Logout")
+		fmt.Println(strings.Repeat("=", 50))
+
+		choice := utils.GetChoice("Enter your choice : ", 1, 3)
+
+		switch choice {
+		case 1:
+			handleViewExamSchedule(db)
+		case 2:
+			handleStudentBlockedAccess()
+		case 3:
+			return
+		}
+	}
+}
+
+func handleViewExamSchedule(db *sql.DB) {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" UPCOMING EXAMS")
+	fmt.Println(strings.Repeat("=", 50))
+
+	query := `
+        SELECT title, subject, exam_date 
+        FROM question_papers 
+        WHERE exam_date >= CURDATE() 
+        ORDER BY exam_date
+    `
+
+	rows, err := db.Query(query)
+	if err != nil {
+		fmt.Println(" Failed to fetch schedule:", err)
+		utils.GetInput("\nPress Enter to continue...")
+		return
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var title, subject string
+		var examDate time.Time
+
+		rows.Scan(&title, &subject, &examDate)
+		count++
+
+		fmt.Printf("\n%d. %s\n", count, title)
+		fmt.Printf("    Subject: %s\n", subject)
+		fmt.Printf("    Date: %s\n", examDate.Format("2006-01-02"))
+	}
+
+	if count == 0 {
+		fmt.Println("No upcoming exams scheduled")
+	}
+
+	utils.GetInput("\nPress Enter to continue...")
+}
+
+func handleStudentBlockedAccess() {
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println(" ACCESS DENIED")
+	fmt.Println(strings.Repeat("=", 50))
+	fmt.Println("\n You do not have permission to access question papers.")
+	fmt.Println("\n Your Permissions:")
+	fmt.Println("    View exam schedule")
+	fmt.Println("\n This access control is enforced by ACL policy.")
+
 	utils.GetInput("\nPress Enter to continue...")
 }
 
@@ -452,28 +522,28 @@ func handleViewMyPapers(service *services.FacultyService) {
 	}
 }
 
-func handleViewExamSchedule(service *services.StudentService) {
-	fmt.Println("\nExam Schedule")
-	fmt.Println(strings.Repeat("=", 50))
+// func handleViewExamSchedule(service *services.StudentService) {
+// 	fmt.Println("\nExam Schedule")
+// 	fmt.Println(strings.Repeat("=", 50))
 
-	sessions, err := service.GetExamSchedule()
-	if err != nil {
-		fmt.Println("", err)
-		return
-	}
+// 	sessions, err := service.GetExamSchedule()
+// 	if err != nil {
+// 		fmt.Println("", err)
+// 		return
+// 	}
 
-	if len(sessions) == 0 {
-		fmt.Println(" No exams scheduled yet")
-		return
-	}
+// 	if len(sessions) == 0 {
+// 		fmt.Println(" No exams scheduled yet")
+// 		return
+// 	}
 
-	for i, session := range sessions {
-		fmt.Printf("\n%d. %s\n", i+1, session.SessionName)
-		fmt.Printf("   Scheduled: %s\n", session.ScheduledTime.Format("2006-01-02 15:04"))
-		fmt.Printf("   Duration: %d minutes\n", session.DurationMinutes)
-		fmt.Printf("   Status: %s\n", session.Status)
-	}
-}
+// 	for i, session := range sessions {
+// 		fmt.Printf("\n%d. %s\n", i+1, session.SessionName)
+// 		fmt.Printf("   Scheduled: %s\n", session.ScheduledTime.Format("2006-01-02 15:04"))
+// 		fmt.Printf("   Duration: %d minutes\n", session.DurationMinutes)
+// 		fmt.Printf("   Status: %s\n", session.Status)
+// 	}
+// }
 
 func handleAttemptAccessPaper(service *services.StudentService) {
 	fmt.Println("\n Attempting to Access Question Paper")
