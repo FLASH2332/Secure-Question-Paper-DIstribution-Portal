@@ -61,7 +61,17 @@ func RegisterUser(db *sql.DB, username, password, email, role string) (*models.U
 	// Validate inputs
 	username = strings.TrimSpace(username)
 	email = strings.TrimSpace(email)
-	role = strings.Title(strings.ToLower(strings.TrimSpace(role)))
+	role = strings.TrimSpace(role)
+
+	// Normalize role to proper casing
+	switch strings.ToLower(role) {
+	case "faculty":
+		role = "Faculty"
+	case "examcell", "exam cell":
+		role = "ExamCell"
+	case "student":
+		role = "Student"
+	}
 
 	if username == "" {
 		return nil, fmt.Errorf("username cannot be empty")
@@ -134,10 +144,12 @@ func RegisterUser(db *sql.DB, username, password, email, role string) (*models.U
 		Email:        email,
 	}
 
-	// Generate RSA keys for Faculty and ExamCell
-	if err := GenerateUserKeys(db, user); err != nil {
-		// Log warning but don't fail registration
-		fmt.Printf("Warning: Failed to generate keys: %v\n", err)
+	// Generate RSA keys for Faculty and ExamCell ONLY
+	if role == "Faculty" || role == "ExamCell" {
+		err := GenerateUserKeys(db, user)
+		if err != nil {
+			fmt.Printf(" Warning: Failed to generate keys: %v\n", err)
+		}
 	}
 
 	return user, nil

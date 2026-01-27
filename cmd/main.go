@@ -150,8 +150,8 @@ func handleLogin(db *sql.DB) {
 }
 
 func showDashboard(db *sql.DB, user *models.User) {
-	fmt.Printf("\n🎉 Welcome, %s!\n", user.Username)
-	fmt.Printf("🎭 Role: %s\n", user.Role)
+	fmt.Printf("\n Welcome, %s!\n", user.Username)
+	fmt.Printf(" Role: %s\n", user.Role)
 
 	switch user.Role {
 	case "Faculty":
@@ -175,7 +175,7 @@ func facultyDashboard(db *sql.DB, user *models.User) {
 		fmt.Println("3. Logout")
 		fmt.Println(strings.Repeat("=", 50))
 
-		choice := utils.GetChoice("Enter your choice", 1, 3)
+		choice := utils.GetChoice("Enter your choice : ", 1, 3)
 
 		switch choice {
 		case 1:
