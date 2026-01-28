@@ -111,6 +111,12 @@ DB_PASSWORD=password
 DB_HOST=host (i.e, localhost)
 DB_PORT=portNo
 DB_NAME=databaseName
+# optional
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASS=your-app-password
+# SMTP_FROM=youremail@gmail.com
 ```
 
 ## Usage Flow
