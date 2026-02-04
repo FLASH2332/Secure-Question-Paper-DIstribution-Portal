@@ -337,7 +337,7 @@ func handleDecryptPaper(user *models.User, paperService *services.PaperService) 
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	fmt.Println(" DECRYPT QUESTION PAPER")
 	fmt.Println(strings.Repeat("=", 50))
-	paperID := utils.GetChoice("Enter Paper ID to decrypt", 1, 9999)
+	paperID := utils.GetChoice("Enter Paper ID to decrypt : ", 1, 9999)
 
 	decryptedContent, err := paperService.DecryptPaper(paperID, user)
 	if err != nil {

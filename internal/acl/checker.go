@@ -59,7 +59,7 @@ func logAuditEntry(db *sql.DB, userID int, action, objectType string, objectID *
 
 	_, err := db.Exec(query, userID, action, objectType, objID, success, details, "127.0.0.1")
 	if err != nil {
-		fmt.Printf("⚠️  Warning: Failed to log audit entry: %v\n", err)
+		fmt.Printf("  Warning: Failed to log audit entry: %v\n", err)
 	}
 }
 
